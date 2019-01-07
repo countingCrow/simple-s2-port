@@ -276,7 +276,7 @@
     return [i, j];
   }
 
-  // TLDR: fijl to latlng
+  // reverse i j to lat lng
   function faceIJLevelOffsetToLatLng(face, i, j, level, offsetI = 0.5, offsetJ = 0.5) {
     let [s, t] = iJLevelToSt(i, j, level, offsetI, offsetJ);
     let [u, v] = sTToUv(s, t);
@@ -295,22 +295,22 @@
   class CrowS2Cell {
     // only face, i, j, level is granted after construct
     // possible init arg:
-    //  - go_string   : 1/22030333332200233030
-    //  - fijl_string : F1ij[885539,851769]@20
-    //  - token       : 3467ff41799
-    //  - mysql_token : 122030333332200233030
+    //  - stander_string    : 1/22030333332200233030
+    //  - fijl_string       : F1ij[885539,851769]@20
+    //  - token             : 3467ff41799
+    //  - mysql_token       : 122030333332200233030
     //  - lat, lng, level   : (24.935570, 121.69994, 20)
     //  - latlng, level     : ({lat:24.935570, lng:121.69994}, 20)
     //  - face, i, j, level : (1, 885539, 851769, 20)
     //  - face, ij, level   : (1, [885539, 851769], 20)
     constructor(...arg) {
       this.isLatLngCellCenter = false;
-      // go_string
+      // stander_string
       // fijl_string
       // token
       // mysql_token
       if (arg.length === 1) {
-        // go_string
+        // stander_string
         if (/^([0-5])\/([0-3]{1,30})$/.test(arg[0])) {
           this.initFromMysqlToken(RegExp.$1, RegExp.$2);
         }
