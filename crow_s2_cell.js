@@ -312,7 +312,7 @@
       if (arg.length === 1) {
         // stander_string
         if (/^([0-5])\/([0-3]{1,30})$/.test(arg[0])) {
-          this.initFromMysqlToken(RegExp.$1, RegExp.$2);
+          this.initFromMysqlToken_(RegExp.$1, RegExp.$2);
         }
         // fijl_string
         else if (/^F([0-5])ij\[(\d+),(\d+)\]@(\d+)$/.test(arg[0])) {
@@ -323,11 +323,11 @@
         }
         // token
         else if (/^([2-9a-b][0-9a-f]{1,15})$/.test(arg[0])) {
-          this.initFromToken(RegExp.$1);
+          this.initFromToken_(RegExp.$1);
         }
         // mysql_token
         else if (/^([0-5])([0-3]{1,30})$/.test(arg[0])) {
-          this.initFromMysqlToken(RegExp.$1, RegExp.$2);
+          this.initFromMysqlToken_(RegExp.$1, RegExp.$2);
         }
         else {
           throw new Error('could not construct s2_cell');
@@ -381,14 +381,14 @@
         throw new Error('invalid level');
       }
       if (this.lat !== undefined && this.lng !== undefined) {
-        this.initFromLatLng();
+        this.initFromLatLng_();
       }
       else if (this.face !== undefined && this.i !== undefined && this.j !== undefined) {
-        this.initFromFaceIJ();
+        this.initFromFaceIJ_();
       }
     }
 
-    initFromLatLng() {
+    initFromLatLng_() {
       let [x, y, z] = latLngToXyz(this.lat, this.lng);
       let [face, [u, v]] = xyzToFaceUv([x, y, z]);
       let [s, t] = uVToST(u, v);
@@ -397,10 +397,10 @@
       this.i = i;
       this.j = j;
     }
-    initFromFaceIJ() {
+    initFromFaceIJ_() {
       // nothing to do, get latlng only when need(?)
     }
-    initFromToken(token) {
+    initFromToken_(token) {
       let binaryCellId = '';
       for (let k = 0; k < token.length; k++) {
         binaryCellId += decimalToBinary(parseInt(token[k], 16), 4);
@@ -421,7 +421,7 @@
       this.i = i;
       this.j = j;
     }
-    initFromMysqlToken(face, pos) {
+    initFromMysqlToken_(face, pos) {
       this.face = face * 1;
       this.level = pos.length;
       let binaryPos = ''.padStart((MAX_LEVEL - this.level) * 2, '0');
