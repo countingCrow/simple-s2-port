@@ -27,6 +27,7 @@
   const LOOKUP_BITS = 4;
   const SWAP_MASK   = 0x01;
   const INVERT_MASK = 0x02;
+  const SWAP_OR_INVERT_MASK = SWAP_MASK | INVERT_MASK;
   const MAX_LEVEL = 30;
 
   // lookup table
@@ -43,7 +44,7 @@
       [3, 2, 0, 1],
       [3, 1, 0, 2],
     ];
-    const posToOrientation = [SWAP_MASK, 0, 0, INVERT_MASK | SWAP_MASK];
+    const posToOrientation = [SWAP_MASK, 0, 0, SWAP_OR_INVERT_MASK];
 
     function initLookupCell(level, i, j, origOrientation, pos, orientation) {
       if (level == LOOKUP_BITS) {
@@ -65,7 +66,7 @@
     initLookupCell(0, 0, 0, 0, 0, 0);
     initLookupCell(0, 0, 0, SWAP_MASK, 0, SWAP_MASK);
     initLookupCell(0, 0, 0, INVERT_MASK, 0, INVERT_MASK);
-    initLookupCell(0, 0, 0, SWAP_MASK | INVERT_MASK, 0, SWAP_MASK | INVERT_MASK);
+    initLookupCell(0, 0, 0, SWAP_OR_INVERT_MASK, 0, SWAP_OR_INVERT_MASK);
     // reverse
     lookupPos.forEach(function (value, index) {
       lookupIJ[value] = index;
@@ -203,13 +204,13 @@
     // Each time we will map 4 bits of both i and j to Hilbert curve position:
     // lookup table will map iiiijjjjoo to ppppppppoo
     // (the resulting orientation would be used for next mapping)
-    // https://github.com/golang/geo/blob/e2863f625f4601d8db214d8ecf4db9b701ebfbf8/s2/cellid.go#L512
+    // https://github.com/google/s2geometry/blob/master/src/s2/s2cell_id.cc#L328
     for (let k = 7; k >= 0; k--) {
       bits += ((i >> (k * LOOKUP_BITS)) & mask) << (LOOKUP_BITS + 2);
       bits += ((j >> (k * LOOKUP_BITS)) & mask) << 2;
       bits = lookupPos[bits];
       pos[-(k - 7)] = bits >> 2;
-      bits &= (SWAP_MASK | INVERT_MASK);
+      bits &= SWAP_OR_INVERT_MASK;
     }
     return pos;
   }
@@ -234,20 +235,14 @@
     if (isNaN(face) || face > 5 || face < 0) {
       throw new Error('invalid face');
     }
-    if (!/^([01]{4})([01]{8})([01]{8})([01]{8})([01]{8})([01]{8})([01]{8})([01]{8})$/.test(positionBinary)) {
+    if (!/^([01]{4})((?:[01]{8}){7})$/.test(positionBinary)) {
       throw new Error('invalid position');
     }
     let i = 0;
     let j = 0;
-    let positionList = new Array(8);
-    positionList[0] = parseInt(RegExp.$1, 2);
-    positionList[1] = parseInt(RegExp.$2, 2);
-    positionList[2] = parseInt(RegExp.$3, 2);
-    positionList[3] = parseInt(RegExp.$4, 2);
-    positionList[4] = parseInt(RegExp.$5, 2);
-    positionList[5] = parseInt(RegExp.$6, 2);
-    positionList[6] = parseInt(RegExp.$7, 2);
-    positionList[7] = parseInt(RegExp.$8, 2);
+    let positionList = [RegExp.$1];
+    positionList.push(...RegExp.$2.match(/[01]{8}/g));
+    positionList = positionList.map(eachPosition => parseInt(eachPosition, 2));
     // try our way back..
     let firstOrientation = 0;
     while (firstOrientation < 4) {
@@ -255,11 +250,12 @@
       let possibleIjo = 0;
       i = 0;
       j = 0;
-      for (let k = 7; k >= 0; k--) {
+      for (let k = 7, l = 0; k >= 0; k--) {
         possibleIjo = lookupIJ[(positionList[k] << 2) + orientation];
-        i += (possibleIjo >> (LOOKUP_BITS + 2)) << (-(k - 7) * LOOKUP_BITS);
-        j += ((possibleIjo >> 2) & ((1 << LOOKUP_BITS) - 1)) << (-(k - 7) * LOOKUP_BITS);
-        orientation = possibleIjo & (SWAP_MASK | INVERT_MASK);
+        i += (possibleIjo >> (LOOKUP_BITS + 2)) << l;
+        j += ((possibleIjo >> 2) & ((1 << LOOKUP_BITS) - 1)) << l;
+        l += LOOKUP_BITS;
+        orientation = possibleIjo & SWAP_OR_INVERT_MASK;
       }
       // should match start
       if (orientation === (face & SWAP_MASK)) {
