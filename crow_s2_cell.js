@@ -260,7 +260,7 @@
       // should match start
       if (orientation === (face & SWAP_MASK)) {
         // first one should only give 4 bits
-        if ((possibleIjo >> (LOOKUP_BITS + 2)) === 0) {
+        if ((lookupPos[possibleIjo] >> (LOOKUP_BITS + 2)) === 0) {
           break;
         }
       }
