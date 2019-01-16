@@ -204,7 +204,7 @@
     // Each time we will map 4 bits of both i and j to Hilbert curve position:
     // lookup table will map iiiijjjjoo to ppppppppoo
     // (the resulting orientation would be used for next mapping)
-    // https://github.com/google/s2geometry/blob/master/src/s2/s2cell_id.cc#L328
+    // https://github.com/google/s2geometry/blob/master/src/s2/s2cell_id.cc#L278
     for (let k = 7; k >= 0; k--) {
       bits += ((i >> (k * LOOKUP_BITS)) & mask) << (LOOKUP_BITS + 2);
       bits += ((j >> (k * LOOKUP_BITS)) & mask) << 2;
@@ -377,7 +377,20 @@
         throw new Error('invalid level');
       }
       if (this.lat !== undefined && this.lng !== undefined) {
+        let is_odd_hotfix = false;
+        // hot fix for odd level
+        if (this.level % 2 === 1) {
+          is_odd_hotfix = true;
+          this.level += 1;
+        }
         this.initFromLatLng_();
+        if (is_odd_hotfix) {
+          let next_level = this.toString();
+          let correct_cell = new CrowS2Cell(next_level.substring(0, next_level.length - 1));
+          this.i = correct_cell.i;
+          this.j = correct_cell.j;
+          this.level -= 1;
+        }
       }
       else if (this.face !== undefined && this.i !== undefined && this.j !== undefined) {
         this.initFromFaceIJ_();
