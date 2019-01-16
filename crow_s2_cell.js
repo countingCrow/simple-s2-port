@@ -21,7 +21,7 @@
 // - currently this port will only focus at convert between latLng
 //   and Hilbert curve position for SQL search use.
 
-(function (appendTo, appendName = 'CrowS2Cell') {
+(function (appendTo, appendName = 'CrowS2CellId') {
   const DEGREES_TO_RADIANS = Math.PI / 180.0;
   const RADIANS_TO_DEGREES = 180.0 / Math.PI;
   const LOOKUP_BITS = 4;
@@ -292,7 +292,7 @@
     };
   }
 
-  class CrowS2Cell {
+  class CrowS2CellId {
     // only face, i, j, level is granted after construct
     // possible init arg:
     //  - stander_string    : 1/22030333332200233030
@@ -484,5 +484,5 @@
 
   }
 
-  appendTo[appendName] = CrowS2Cell;
+  appendTo[appendName] = CrowS2CellId;
 })(window);
