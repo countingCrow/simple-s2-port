@@ -87,12 +87,12 @@
     return [Math.cos(theta) * cosphi, Math.sin(theta) * cosphi, Math.sin(phi)];
   }
   //  2. (x, y, z) to (face, u, v)
-  function xyzToFaceUv(xyz) {
+  function xyzLevelToFaceUv(xyz, level) {
     let face = largestAbsComponent(xyz);
     if (xyz[face] < 0) {
       face += 3;
     }
-    return [face, faceToUv(face, xyz)];
+    return [face, faceXyzLevelToUv(face, xyz, level)];
   }
   function largestAbsComponent([x, y, z]) {
     let temp = [Math.abs(x), Math.abs(y), Math.abs(z)];
@@ -101,7 +101,7 @@
     }
     return temp[1] > temp[2] ? 1 : 2;
   }
-  function faceToUv(face, [x, y, z]) {
+  function faceXyzLevelToUv(face, [x, y, z], level) {
     let u, v;
     switch (face) {
       case 0:
@@ -131,6 +131,10 @@
       default:
         throw new Error('invalid face');
         break;
+    }
+    // not really sure why but seem need to swap when level is odd
+    if (level % 2 === 1) {
+      return [v, u];
     }
     return [u, v];
   }
@@ -377,20 +381,7 @@
         throw new Error('invalid level');
       }
       if (this.lat !== undefined && this.lng !== undefined) {
-        let is_odd_hotfix = false;
-        // hot fix for odd level
-        if (this.level % 2 === 1) {
-          is_odd_hotfix = true;
-          this.level += 1;
-        }
         this.initFromLatLng_();
-        if (is_odd_hotfix) {
-          let next_level = this.toString();
-          let correct_cell = new CrowS2Cell(next_level.substring(0, next_level.length - 1));
-          this.i = correct_cell.i;
-          this.j = correct_cell.j;
-          this.level -= 1;
-        }
       }
       else if (this.face !== undefined && this.i !== undefined && this.j !== undefined) {
         this.initFromFaceIJ_();
@@ -399,7 +390,7 @@
 
     initFromLatLng_() {
       let [x, y, z] = latLngToXyz(this.lat, this.lng);
-      let [face, [u, v]] = xyzToFaceUv([x, y, z]);
+      let [face, [u, v]] = xyzLevelToFaceUv([x, y, z], this.level);
       let [s, t] = uVToST(u, v);
       let [i, j] = sTLevelToIJ(s, t, this.level);
       this.face = face;
