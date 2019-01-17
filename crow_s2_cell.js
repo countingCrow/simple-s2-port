@@ -87,12 +87,12 @@
     return [Math.cos(theta) * cosphi, Math.sin(theta) * cosphi, Math.sin(phi)];
   }
   //  2. (x, y, z) to (face, u, v)
-  function xyzLevelToFaceUv(xyz, level) {
+  function xyzToFaceUv(xyz) {
     let face = largestAbsComponent(xyz);
     if (xyz[face] < 0) {
       face += 3;
     }
-    return [face, faceXyzLevelToUv(face, xyz, level)];
+    return [face, faceXyzToUv(face, xyz)];
   }
   function largestAbsComponent([x, y, z]) {
     let temp = [Math.abs(x), Math.abs(y), Math.abs(z)];
@@ -101,7 +101,7 @@
     }
     return temp[1] > temp[2] ? 1 : 2;
   }
-  function faceXyzLevelToUv(face, [x, y, z], level) {
+  function faceXyzToUv(face, [x, y, z]) {
     let u, v;
     switch (face) {
       case 0:
@@ -131,10 +131,6 @@
       default:
         throw new Error('invalid face');
         break;
-    }
-    // not really sure why but seem need to swap when level is odd
-    if (level % 2 === 1) {
-      return [v, u];
     }
     return [u, v];
   }
@@ -390,7 +386,7 @@
 
     initFromLatLng_() {
       let [x, y, z] = latLngToXyz(this.lat, this.lng);
-      let [face, [u, v]] = xyzLevelToFaceUv([x, y, z], this.level);
+      let [face, [u, v]] = xyzToFaceUv([x, y, z], this.level);
       let [s, t] = uVToST(u, v);
       let [i, j] = sTLevelToIJ(s, t, this.level);
       this.face = face;
@@ -460,8 +456,11 @@
       if (fijl) {
         return 'F' + this.face + 'ij[' + this.i + ',' + this.j + ']@' + this.level;
       }
+      // ij should be correct from above, only swap when we need to get
+      // position at odd level
+      let [i, j] = (this.level % 2) ? [this.j, this.i] : [this.i, this.j];
       // /^[0-5]/[0-3]{level}$/
-      let pos = faceIJToPos(this.face, this.i, this.j);
+      let pos = faceIJToPos(this.face, i, j);
       let positionBinary = posLevelToBinaryString(pos, this.level);
       let tokenGroup = positionBinary.match(/.{1,2}/g);
       tokenGroup.forEach(function (value, index) {
@@ -470,7 +469,10 @@
       return this.face + '/' + tokenGroup.join('');
     }
     toToken() {
-      let pos = faceIJToPos(this.face, this.i, this.j);
+      // ij should be correct from above, only swap when we need to get
+      // position at odd level
+      let [i, j] = (this.level % 2) ? [this.j, this.i] : [this.i, this.j];
+      let pos = faceIJToPos(this.face, i, j);
       let positionBinary = posLevelToBinaryString(pos, this.level);
       // cap with face, tail with 1
       let tokenBinary = decimalToBinary(this.face, 3) + positionBinary + '1';
