@@ -31,6 +31,15 @@
   const SWAP_OR_INVERT_MASK = SWAP_MASK | INVERT_MASK;
   const MAX_LEVEL = 30;
 
+  // 1/22030333332200233030
+  const REGEXP_STANDER = /^([0-5])\/([0-3]{1,30})$/;
+  // F1ij[885539,851769]@20
+  const REGEXP_FIJL = /^F([0-5])ij\[(\d+),(\d+)\]@(\d+)$/;
+  // 3467ff41799
+  const REGEXP_TOKEN = /^([2-9a-b][0-9a-f]{1,15})$/;
+  // 122030333332200233030
+  const REGEXP_MYSQL_TOKEN = /^([0-5])([0-3]{1,30})$/;
+
   // lookup table
   let lookupIJ = new Array(1 << (2 * LOOKUP_BITS + 2));
   let lookupPos = new Array(1 << (2 * LOOKUP_BITS + 2));
@@ -308,20 +317,20 @@
       // mysql_token
       if (arg.length === 1) {
         // stander_string
-        if (/^([0-5])\/([0-3]{1,30})$/.test(arg[0])) {
+        if (REGEXP_STANDER.test(arg[0])) {
           this.initFromMysqlToken_(RegExp.$1, RegExp.$2);
         }
         // fijl_string
-        else if (/^F([0-5])ij\[(\d+),(\d+)\]@(\d+)$/.test(arg[0])) {
+        else if (REGEXP_FIJL.test(arg[0])) {
           // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment#Assignment_without_declaration
           ({$1: this.face, $2: this.i, $3: this.j, $4: this.level} = RegExp);
         }
         // token
-        else if (/^([2-9a-b][0-9a-f]{1,15})$/.test(arg[0])) {
+        else if (REGEXP_TOKEN.test(arg[0])) {
           this.initFromToken_(RegExp.$1);
         }
         // mysql_token
-        else if (/^([0-5])([0-3]{1,30})$/.test(arg[0])) {
+        else if (REGEXP_MYSQL_TOKEN.test(arg[0])) {
           this.initFromMysqlToken_(RegExp.$1, RegExp.$2);
         }
         else {
