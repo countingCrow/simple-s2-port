@@ -21,7 +21,8 @@
 // - currently this port will only focus at convert between latLng
 //   and Hilbert curve position for SQL search use.
 
-(function (appendTo, appendName = 'CrowS2CellId') {
+(function (appendTo, appendName) {
+  'use strict';
   const DEGREES_TO_RADIANS = Math.PI / 180.0;
   const RADIANS_TO_DEGREES = 180.0 / Math.PI;
   const LOOKUP_BITS = 4;
@@ -312,10 +313,8 @@
         }
         // fijl_string
         else if (/^F([0-5])ij\[(\d+),(\d+)\]@(\d+)$/.test(arg[0])) {
-          this.face = RegExp.$1;
-          this.i = RegExp.$2;
-          this.j = RegExp.$3;
-          this.level = RegExp.$4;
+          // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment#Assignment_without_declaration
+          ({$1: this.face, $2: this.i, $3: this.j, $4: this.level} = RegExp);
         }
         // token
         else if (/^([2-9a-b][0-9a-f]{1,15})$/.test(arg[0])) {
@@ -333,46 +332,42 @@
       else if (arg.length === 2) {
         // [lat, lng], level
         if (Array.isArray(arg[0])) {
-          this.lat = arg[0][0] * 1;
-          this.lng = arg[0][1] * 1;
+          [[this.lat, this.lng], this.level] = arg;
         }
         // {lat, lng}, level
         else if (typeof arg[0] === 'object') {
-          this.lat = arg[0].lat * 1;
-          this.lng = arg[0].lng * 1;
+          [{lat: this.lat, lng: this.lng}, this.level] = arg;
         }
         else {
           throw new Error('invalid latlng');
         }
-        this.level = arg[1] * 1;
       }
       // lat, lng, level
       // face, ij, level
       else if (arg.length === 3) {
         // face, ij, level
         if (Array.isArray(arg[1])) {
-          this.face = arg[0] * 1;
-          this.i = arg[1][0] * 1;
-          this.j = arg[1][1] * 1;
+          [this.face, [this.i, this.j], this.level] = arg;
         }
         // lat, lng, level
         else {
-          this.lat = arg[0] * 1;
-          this.lng = arg[1] * 1;
+          [this.lat, this.lng, this.level] = arg;
         }
-        this.level = arg[2] * 1;
       }
       // face, i, j, level
       else if (arg.length === 4) {
-        this.face = arg[0] * 1;
-        this.i = arg[1] * 1;
-        this.j = arg[2] * 1;
-        this.level = arg[3] * 1;
+        [this.face, this.i, this.j, this.level] = arg;
       }
       // error
       else {
         throw new Error('could not construct s2_cell');
       }
+      // these SHOULD be numeric
+      ['face', 'i', 'j', 'level', 'lat', 'lng'].forEach((propName) => {
+        if (typeof this[propName] === 'string') {
+          this[propName] *= 1;
+        }
+      });
       if (isNaN(this.level) || this.level > MAX_LEVEL || this.level < 1) {
         throw new Error('invalid level');
       }
@@ -385,13 +380,10 @@
     }
 
     initFromLatLng_() {
-      let [x, y, z] = latLngToXyz(this.lat, this.lng);
-      let [face, [u, v]] = xyzToFaceUv([x, y, z], this.level);
-      let [s, t] = uVToST(u, v);
-      let [i, j] = sTLevelToIJ(s, t, this.level);
-      this.face = face;
-      this.i = i;
-      this.j = j;
+      [this.x, this.y, this.z] = latLngToXyz(this.lat, this.lng);
+      [this.face, [this.u, this.v]] = xyzToFaceUv([this.x, this.y, this.z], this.level);
+      [this.s, this.t] = uVToST(this.u, this.v);
+      [this.i, this.j] = sTLevelToIJ(this.s, this.t, this.level);
     }
     initFromFaceIJ_() {
       // nothing to do, get latlng only when need(?)
@@ -413,9 +405,7 @@
         .substring(3, binaryCellId.length - 1)
         .padStart(MAX_LEVEL * 2, '0')
         ;
-      let [i, j] = faceBinaryPosToIj(this.face, binaryPos);
-      this.i = i;
-      this.j = j;
+      [this.i, this.j] = faceBinaryPosToIj(this.face, binaryPos);
     }
     initFromMysqlToken_(face, pos) {
       this.face = face * 1;
@@ -424,17 +414,14 @@
       for (let k = 0; k < this.level; k++) {
         binaryPos += decimalToBinary(pos[k], 2);
       }
-      let [i, j] = faceBinaryPosToIj(face, binaryPos);
-      this.i = i;
-      this.j = j;
+      [this.i, this.j] = faceBinaryPosToIj(face, binaryPos);
     }
 
     getLatLng() {
-      let result = faceIJLevelOffsetToLatLng(this.face, this.i, this.j, this.level);
-      this.lat = result.lat;
-      this.lng = result.lng;
       this.isLatLngCellCenter = true;
-      return result;
+      return {lat: this.lat, lng: this.lng}
+        = faceIJLevelOffsetToLatLng(this.face, this.i, this.j, this.level)
+        ;
     }
     getCornerLatLng() {
       let result = [];
@@ -487,4 +474,4 @@
   }
 
   appendTo[appendName] = CrowS2CellId;
-})(window);
+})(window, 'CrowS2CellId');
