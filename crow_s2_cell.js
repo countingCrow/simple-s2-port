@@ -25,11 +25,11 @@
   'use strict';
   const DEGREES_TO_RADIANS = Math.PI / 180.0;
   const RADIANS_TO_DEGREES = 180.0 / Math.PI;
+  const MAX_LEVEL   = 30;
   const LOOKUP_BITS = 4;
   const SWAP_MASK   = 0x01;
   const INVERT_MASK = 0x02;
   const SWAP_OR_INVERT_MASK = SWAP_MASK | INVERT_MASK;
-  const MAX_LEVEL = 30;
 
   // 1/22030333332200233030
   const REGEXP_STANDER = /^([0-5])\/([0-3]{1,30})$/;
@@ -66,13 +66,20 @@
       i <<= 1;
       j <<= 1;
       pos <<= 2;
-      let r = posToIJ[orientation];
-      initLookupCell(level, i + (r[0] >> 1), j + (r[0] & 1), origOrientation, pos,     orientation ^ posToOrientation[0]);
-      initLookupCell(level, i + (r[1] >> 1), j + (r[1] & 1), origOrientation, pos + 1, orientation ^ posToOrientation[1]);
-      initLookupCell(level, i + (r[2] >> 1), j + (r[2] & 1), origOrientation, pos + 2, orientation ^ posToOrientation[2]);
-      initLookupCell(level, i + (r[3] >> 1), j + (r[3] & 1), origOrientation, pos + 3, orientation ^ posToOrientation[3]);
+      let di = posToI[orientation];
+      let dj = posToJ[orientation];
+      initLookupCell(level, i + di[0], j + dj[0], origOrientation, pos,     orientation ^ posToOrientation[0]);
+      initLookupCell(level, i + di[1], j + dj[1], origOrientation, pos + 1, orientation ^ posToOrientation[1]);
+      initLookupCell(level, i + di[2], j + dj[2], origOrientation, pos + 2, orientation ^ posToOrientation[2]);
+      initLookupCell(level, i + di[3], j + dj[3], origOrientation, pos + 3, orientation ^ posToOrientation[3]);
     }
 
+    let posToI = [];
+    let posToJ = [];
+    posToIJ.forEach((row, index) => {
+      posToI[index] = [row[0] >> 1, row[1] >> 1, row[2] >> 1, row[3] >> 1];
+      posToJ[index] = [row[0] & 1, row[1] & 1, row[2] & 1, row[3] & 1];
+    });
     initLookupCell(0, 0, 0, 0, 0, 0);
     initLookupCell(0, 0, 0, SWAP_MASK, 0, SWAP_MASK);
     initLookupCell(0, 0, 0, INVERT_MASK, 0, INVERT_MASK);
@@ -93,8 +100,8 @@
   function latLngToXyz(lat, lng) {
     let phi = lat * DEGREES_TO_RADIANS;
     let theta = lng * DEGREES_TO_RADIANS;
-    let cosphi = Math.cos(phi);
-    return [Math.cos(theta) * cosphi, Math.sin(theta) * cosphi, Math.sin(phi)];
+    let cosPhi = Math.cos(phi);
+    return [Math.cos(theta) * cosPhi, Math.sin(theta) * cosPhi, Math.sin(phi)];
   }
   //  2. (x, y, z) to (face, u, v)
   function xyzToFaceUv(xyz) {
@@ -322,7 +329,8 @@
         }
         // fijl_string
         else if (REGEXP_FIJL.test(arg[0])) {
-          // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment#Assignment_without_declaration
+          // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
+          //   Operators/Destructuring_assignment#Assignment_without_declaration
           ({$1: this.face, $2: this.i, $3: this.j, $4: this.level} = RegExp);
         }
         // token
@@ -386,11 +394,14 @@
       else if (this.face !== undefined && this.i !== undefined && this.j !== undefined) {
         this.initFromFaceIJ_();
       }
+      else {
+        throw new Error('could not construct s2_cell');
+      }
     }
 
     initFromLatLng_() {
-      [this.x, this.y, this.z] = latLngToXyz(this.lat, this.lng);
-      [this.face, [this.u, this.v]] = xyzToFaceUv([this.x, this.y, this.z], this.level);
+      let xyz = [this.x, this.y, this.z] = latLngToXyz(this.lat, this.lng);
+      [this.face, [this.u, this.v]] = xyzToFaceUv(xyz, this.level);
       [this.s, this.t] = uVToST(this.u, this.v);
       [this.i, this.j] = sTLevelToIJ(this.s, this.t, this.level);
     }
@@ -429,17 +440,15 @@
     getLatLng() {
       this.isLatLngCellCenter = true;
       return {lat: this.lat, lng: this.lng}
-        = faceIJLevelOffsetToLatLng(this.face, this.i, this.j, this.level)
-        ;
+        = faceIJLevelOffsetToLatLng(this.face, this.i, this.j, this.level);
     }
     getCornerLatLng() {
-      let result = [];
-      for (let offsetI = 0; offsetI < 2; offsetI++) {
-        for (let offsetJ = 0; offsetJ < 2; offsetJ++) {
-          result.push(faceIJLevelOffsetToLatLng(this.face, this.i, this.j, this.level, offsetI, offsetJ));
-        }
-      }
-      return result;
+      return [
+        faceIJLevelOffsetToLatLng(this.face, this.i, this.j, this.level, 0, 0),
+        faceIJLevelOffsetToLatLng(this.face, this.i, this.j, this.level, 0, 1),
+        faceIJLevelOffsetToLatLng(this.face, this.i, this.j, this.level, 1, 0),
+        faceIJLevelOffsetToLatLng(this.face, this.i, this.j, this.level, 1, 1),
+      ];
     }
 
     // fppp..pp
